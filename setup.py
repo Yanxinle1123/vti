@@ -7,7 +7,6 @@ setup(
     install_requires=[
         "opencv-python",
     ],
-
     author="YanXinle",
     author_email="1020121123@qq.com",
     description="视频转图片的工具",
