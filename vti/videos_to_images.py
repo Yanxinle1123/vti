@@ -1,6 +1,6 @@
 import asyncio
-import concurrent.futures
 import os
+import threading
 import time
 
 import cv2
@@ -44,6 +44,7 @@ class VideosToImages:
         # 处理 frame_interval_ms 参数
         if isinstance(self._frame_interval_ms, tuple) and self._frame_interval_ms[0] == 'auto':
             num_images = self._frame_interval_ms[1]
+
             # 计算每张图应该截取的帧索引
             frame_indices = [int(i * (total_frames - 1) / (num_images - 1)) for i in range(num_images)]
         else:
@@ -52,19 +53,19 @@ class VideosToImages:
             frame_indices = [i * skip_frames for i in range(total_frames // skip_frames)]
 
         tasks = []
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            for i, index in enumerate(frame_indices):
-                # 设置视频捕获到指定帧
-                video_capture.set(cv2.CAP_PROP_POS_FRAMES, index)
-                success, frame = video_capture.read()
-                if success:
-                    loop = asyncio.get_running_loop()
-                    # 使用 i + 1 作为图片名称
-                    task = loop.run_in_executor(executor, _save_image, frame, self._save_path, i + 1, self._suffix)
-                    tasks.append(task)
+        for i, index in enumerate(frame_indices):
 
-            # 等待所有任务完成
-            await asyncio.gather(*tasks)
+            # 设置视频捕获到指定帧
+            video_capture.set(cv2.CAP_PROP_POS_FRAMES, index)
+            success, frame = video_capture.read()
+            if success:
+                task = threading.Thread(target=_save_image, args=(frame, self._save_path, i + 1, self._suffix))
+                task.start()
+                tasks.append(task)
+
+        # 等待所有线程完成
+        for task in tasks:
+            task.join()
 
         video_capture.release()
         cv2.destroyAllWindows()
@@ -76,6 +77,6 @@ if __name__ == '__main__':
     video_path = 'https://img.tukuppt.com/video_show/2475824/00/01/84/5b4b1d6d2b582.mp4'
     save_path = 'save_images/fallen_leaves2_images/'
 
-    VideosToImages(video_source=video_path, save_path=save_path, frame_interval_ms=('auto', 5))
+    VideosToImages(video_source=video_path, save_path=save_path, frame_interval_ms=1000)
 
     print('处理完成')
