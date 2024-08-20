@@ -21,14 +21,14 @@ def _save_image(image, addr, name, suffix='.jpg'):
     cv2.imwrite(address, image)
 
 
-def process_frame(video_source, index, save_path, suffix):
+def process_frame(video_source, index, save_path, suffix, pic_index):
     video_capture = cv2.VideoCapture(video_source)
     video_capture.set(cv2.CAP_PROP_POS_FRAMES, index)
     success, frame = video_capture.read()
     video_capture.release()
 
     if success:
-        _save_image(frame, save_path, index + 1, suffix)
+        _save_image(frame, save_path, pic_index, suffix)
 
 
 class VideosToImages:
@@ -83,13 +83,14 @@ class VideosToImages:
             with Pool(processes=max_workers) as pool:
                 pool.starmap(
                     process_frame,
-                    [(self._video_source, index, self._save_path, self._suffix) for index in frame_indices]
+                    [(self._video_source, index, self._save_path, self._suffix, i + 1) for i, index in
+                     enumerate(frame_indices)]
                 )
 
             cv2.destroyAllWindows()
         except ZeroDivisionError:
             print("\033[31mError: The value of parameter 'frame_interval_ms' cannot be too small\033[0m")
-            return 'Error'
+            return
 
 
 if __name__ == '__main__':
@@ -100,6 +101,6 @@ if __name__ == '__main__':
     video_path = 'https://img.tukuppt.com/video_show/2475824/00/01/84/5b4b1d6d2b582.mp4'
     save_path = 'save_images/fallen_leaves2_images/'
 
-    VideosToImages(video_source=video_path, save_path=save_path, frame_interval_ms=('auto', 10), max_workers='auto')
+    VideosToImages(video_source=video_path, save_path=save_path, frame_interval_ms=1000, max_workers='auto')
 
     print(f'处理完成, 处理时间: {time.time() - start_time}')
